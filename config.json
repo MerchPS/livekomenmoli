@@ -3,9 +3,11 @@
   "videoId": "9T-nyBGAgrk",
   "maxResults": 200,
   "pollIntervalMs": 0,
+  "statsIntervalMs": 15000,
   "showOwner": true,
   "showModerator": true,
   "showSuperChat": true,
   "darkMode": true,
-  "autoScroll": true
+  "autoScroll": true,
+  "accentColor": "#ff4d8d"
 }
