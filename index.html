@@ -10,23 +10,28 @@
     --accent-2: #a855f7;
     --bg: #0b0b12;
     --bg-2: #12121c;
-    --panel: rgba(255,255,255,0.045);
-    --border: rgba(255,255,255,0.07);
-    --text: #ececf1;
-    --text-dim: #8b8b9a;
+    --panel: rgba(255,255,255,0.06);
+    --panel-strong: rgba(20,20,30,0.55);
+    --border: rgba(255,255,255,0.09);
+    --text: #f2f2f7;
+    --text-dim: #b6b6c4;
     --name: #7dd3fc;
     --owner: #ffd84d;
     --mod: #7dd3fc;
     --super-1: #ff4e45;
     --super-2: #ff9800;
+
+    --bg-blur: 14px;
+    --bg-dim: 0.72;
   }
   body.light {
     --bg: #f7f7fb;
     --bg-2: #ffffff;
-    --panel: rgba(0,0,0,0.035);
-    --border: rgba(0,0,0,0.08);
+    --panel: rgba(255,255,255,0.55);
+    --panel-strong: rgba(255,255,255,0.7);
+    --border: rgba(0,0,0,0.10);
     --text: #14141c;
-    --text-dim: #6b6b7b;
+    --text-dim: #5a5a6b;
     --name: #065fd4;
     --owner: #b8860b;
     --mod: #0d47a1;
@@ -35,21 +40,55 @@
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   html, body { height: 100%; }
+
+  /* ==== BACKGROUND LAYER (gambar + blur + overlay) ==== */
+  #bg-layer {
+    position: fixed;
+    inset: -20px; /* sedikit lebih besar supaya tepi blur tidak kelihatan */
+    z-index: -2;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(var(--bg-blur)) saturate(1.05);
+    transform: scale(1.06); /* hilangkan artifact blur di tepi */
+  }
+  #bg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 12%, transparent),
+        transparent 45%),
+      linear-gradient(315deg,
+        color-mix(in srgb, var(--accent-2) 12%, transparent),
+        transparent 50%),
+      rgba(8, 8, 14, var(--bg-dim));
+    pointer-events: none;
+  }
+  body.light #bg-overlay {
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 10%, transparent),
+        transparent 45%),
+      linear-gradient(315deg,
+        color-mix(in srgb, var(--accent-2) 10%, transparent),
+        transparent 50%),
+      rgba(255,255,255, calc(var(--bg-dim) - 0.15));
+  }
+
   body {
     margin: 0;
     font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
     font-size: 15px;
     line-height: 1.45;
-    background:
-      radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
-      radial-gradient(900px 500px at 110% 10%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 60%),
-      var(--bg);
     color: var(--text);
     padding: 12px;
     padding-bottom: 40px;
+    background: var(--bg); /* fallback kalau gambar gagal load */
   }
 
-  /* ==== HEADER STATS (FIXED, selalu kelihatan) ==== */
+  /* ==== HEADER STATS (FIXED) ==== */
   .stats {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -58,12 +97,12 @@
     gap: 8px;
     padding: 10px 12px;
     background: linear-gradient(135deg,
-      color-mix(in srgb, var(--accent) 14%, var(--bg)),
-      color-mix(in srgb, var(--accent-2) 12%, var(--bg)));
+      color-mix(in srgb, var(--accent) 22%, var(--panel-strong)),
+      color-mix(in srgb, var(--accent-2) 18%, var(--panel-strong)));
     border-bottom: 1px solid var(--border);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    box-shadow: 0 6px 30px rgba(0,0,0,0.35);
     padding-top: calc(10px + env(safe-area-inset-top));
   }
 
@@ -75,22 +114,22 @@
     gap: 8px;
     padding: 8px 10px;
     border-radius: 14px;
-    background: var(--panel);
+    background: rgba(255,255,255,0.06);
     border: 1px solid var(--border);
     overflow: hidden;
   }
+  body.light .stat { background: rgba(255,255,255,0.55); }
 
   .stat .ico {
     width: 30px; height: 30px;
     border-radius: 9px;
     display: grid; place-items: center;
-    font-size: 16px;
     flex-shrink: 0;
     background: linear-gradient(135deg,
-      color-mix(in srgb, var(--accent) 55%, transparent),
-      color-mix(in srgb, var(--accent-2) 55%, transparent));
+      color-mix(in srgb, var(--accent) 60%, transparent),
+      color-mix(in srgb, var(--accent-2) 60%, transparent));
     color: #fff;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
   }
   .stat .ico svg { width: 15px; height: 15px; }
   .stat .info { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
@@ -125,24 +164,23 @@
     100% { box-shadow: 0 0 0 0 rgba(255,45,85,0); }
   }
 
-  /* Spacer biar chat tidak ketutup header fixed */
   .stats-spacer {
     height: 70px;
     height: calc(70px + env(safe-area-inset-top));
   }
 
-  /* ==== STATUS ==== */
   #status {
     font-size: 12.5px;
     color: var(--text-dim);
     margin: 0 2px 10px;
     padding: 8px 12px;
     border-radius: 12px;
-    background: var(--panel);
+    background: var(--panel-strong);
     border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 
-  /* ==== CHAT LIST ==== */
   #chat {
     display: flex;
     flex-direction: column;
@@ -152,13 +190,19 @@
   .msg {
     padding: 10px 13px;
     border-radius: 14px;
-    background: var(--panel);
+    background: var(--panel-strong);
     border: 1px solid var(--border);
     line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: anywhere;
-    transition: background .2s ease, border-color .2s ease;
+    backdrop-filter: blur(10px) saturate(1.2);
+    -webkit-backdrop-filter: blur(10px) saturate(1.2);
+    transition: background .2s ease, border-color .2s ease, transform .15s ease;
     animation: pop .18s ease;
+  }
+  .msg:hover {
+    transform: translateX(2px);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
   }
   @keyframes pop {
     from { opacity: 0; transform: translateY(4px) scale(0.99); }
@@ -170,7 +214,9 @@
     font-weight: 700;
     margin-right: 6px;
     font-size: 14px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
   }
+  body.light .name { text-shadow: none; }
 
   .badge {
     display: inline-block;
@@ -183,13 +229,13 @@
     vertical-align: middle;
     text-transform: uppercase;
   }
-  .owner { background: color-mix(in srgb, var(--owner) 22%, transparent); color: var(--owner); }
-  .mod   { background: color-mix(in srgb, var(--mod) 22%, transparent); color: var(--mod); }
+  .owner { background: color-mix(in srgb, var(--owner) 25%, transparent); color: var(--owner); }
+  .mod   { background: color-mix(in srgb, var(--mod) 25%, transparent); color: var(--mod); }
 
   .msg.member {
     background: linear-gradient(90deg,
-      color-mix(in srgb, var(--accent) 10%, transparent),
-      transparent 60%);
+      color-mix(in srgb, var(--accent) 22%, var(--panel-strong)),
+      var(--panel-strong) 60%);
     border-left: 3px solid var(--accent);
   }
 
@@ -197,7 +243,7 @@
     background: linear-gradient(135deg, var(--super-1), var(--super-2));
     color: #fff;
     border: 0;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--super-1) 35%, transparent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--super-1) 45%, transparent);
   }
   .msg.superchat .name { color: #fff; }
 
@@ -215,9 +261,9 @@
     height: 44px;
     border-radius: 14px;
     background: linear-gradient(90deg,
-      color-mix(in srgb, var(--panel) 100%, transparent) 25%,
-      color-mix(in srgb, var(--accent) 10%, transparent) 50%,
-      color-mix(in srgb, var(--panel) 100%, transparent) 75%);
+      rgba(255,255,255,0.05) 25%,
+      color-mix(in srgb, var(--accent) 15%, transparent) 50%,
+      rgba(255,255,255,0.05) 75%);
     background-size: 200% 100%;
     animation: shine 1.4s infinite;
   }
@@ -229,63 +275,42 @@
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--accent) 40%, transparent);
+    background: color-mix(in srgb, var(--accent) 45%, transparent);
     border-radius: 999px;
   }
 
-  /* =================================================== */
-  /* ============ RESPONSIVE KHUSUS HP ================= */
-  /* =================================================== */
+  /* ============ RESPONSIVE HP ============ */
   @media (max-width: 600px) {
-    body {
-      font-size: 16px;
-      padding: 8px;
-      padding-bottom: 30px;
-    }
+    :root { --bg-blur: 18px; }
+
+    body { font-size: 16px; padding: 8px; padding-bottom: 30px; }
 
     .stats {
       gap: 5px;
       padding: 7px 8px;
       padding-top: calc(7px + env(safe-area-inset-top));
     }
-
-    .stat {
-      padding: 6px 8px;
-      gap: 6px;
-      border-radius: 12px;
-    }
-
-    .stat .ico {
-      width: 26px; height: 26px;
-      border-radius: 8px;
-    }
+    .stat { padding: 6px 8px; gap: 6px; border-radius: 12px; }
+    .stat .ico { width: 26px; height: 26px; border-radius: 8px; }
     .stat .ico svg { width: 13px; height: 13px; }
-
-    .stat .label { font-size: 9px; letter-spacing: .3px; }
+    .stat .label { font-size: 9px; }
     .stat .value { font-size: 14px; }
 
-    .stats-spacer {
-      height: 60px;
-      height: calc(60px + env(safe-area-inset-top));
-    }
+    .stats-spacer { height: 60px; height: calc(60px + env(safe-area-inset-top)); }
 
     #status { font-size: 11.5px; padding: 7px 10px; margin-bottom: 8px; }
 
     .msg {
       padding: 11px 13px;
       border-radius: 13px;
-      font-size: 16px;              /* teks chat lebih besar */
-      line-height: 1.5;
+      font-size: 16px;
     }
-
     .name { font-size: 15.5px; }
-
     .badge { font-size: 9.5px; padding: 1px 6px; }
     .amount { font-size: 12px; }
     .skeleton { height: 48px; }
   }
 
-  /* HP sangat kecil */
   @media (max-width: 360px) {
     .stat .label { font-size: 8.5px; }
     .stat .value { font-size: 13px; }
@@ -298,7 +323,9 @@
 </head>
 <body>
 
-<!-- HEADER FIXED -->
+<div id="bg-layer"></div>
+<div id="bg-overlay"></div>
+
 <div class="stats">
   <div class="stat">
     <div class="ico">
@@ -331,7 +358,6 @@
   </div>
 </div>
 
-<!-- Spacer agar chat tidak ketutup header -->
 <div class="stats-spacer"></div>
 
 <div id="status">Memuat config.json...</div>
@@ -350,9 +376,7 @@ let running = false;
 let pollTimer = null;
 let statsTimer = null;
 
-function setStatus(s) {
-  document.getElementById("status").textContent = s;
-}
+function setStatus(s) { document.getElementById("status").textContent = s; }
 
 function fmt(n) {
   if (n === undefined || n === null || isNaN(n)) return "—";
@@ -373,8 +397,19 @@ async function loadConfig() {
   }
 
   if (CFG.darkMode === false) document.body.classList.add("light");
+
   if (CFG.accentColor) {
     document.documentElement.style.setProperty("--accent", CFG.accentColor);
+  }
+  if (CFG.backgroundBlur != null) {
+    document.documentElement.style.setProperty("--bg-blur", CFG.backgroundBlur + "px");
+  }
+  if (CFG.backgroundDim != null) {
+    document.documentElement.style.setProperty("--bg-dim", CFG.backgroundDim);
+  }
+  if (CFG.backgroundImage) {
+    document.getElementById("bg-layer").style.backgroundImage =
+      `url("${CFG.backgroundImage}")`;
   }
 
   if (!CFG.apiKey || CFG.apiKey.includes("ISI_")) {
@@ -398,10 +433,8 @@ async function fetchStats() {
     if (d.error) return;
     const item = d.items && d.items[0];
     if (!item) return;
-
     const lsd = item.liveStreamingDetails || {};
     const st  = item.statistics || {};
-
     document.getElementById("viewers").textContent =
       lsd.concurrentViewers ? fmt(lsd.concurrentViewers) : "—";
     document.getElementById("likes").textContent =
@@ -452,7 +485,6 @@ function stop() {
 
 async function poll() {
   if (!running) return;
-
   const max = Math.min(Math.max(CFG.maxResults || 200, 1), 2000);
   const url =
     `https://www.googleapis.com/youtube/v3/liveChat/messages` +
@@ -464,7 +496,6 @@ async function poll() {
 
   try {
     const d = await (await fetch(url)).json();
-
     if (d.error) { setStatus("❌ " + d.error.message); return; }
 
     if (d.items && d.items.length) {
@@ -521,11 +552,8 @@ function addMsg(item) {
   }
 
   const chat = document.getElementById("chat");
-  const atBottom =
-    (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 200);
-
+  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 200);
   chat.appendChild(el);
-
   if (CFG.autoScroll !== false && atBottom) {
     window.scrollTo(0, document.body.scrollHeight);
   }
