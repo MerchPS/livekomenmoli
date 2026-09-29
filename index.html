@@ -41,16 +41,16 @@
   html { -webkit-text-size-adjust: 100%; }
   html, body { height: 100%; }
 
-  /* ==== BACKGROUND LAYER (gambar + blur + overlay) ==== */
+  /* ==== BACKGROUND ==== */
   #bg-layer {
     position: fixed;
-    inset: -20px; /* sedikit lebih besar supaya tepi blur tidak kelihatan */
+    inset: -20px;
     z-index: -2;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     filter: blur(var(--bg-blur)) saturate(1.05);
-    transform: scale(1.06); /* hilangkan artifact blur di tepi */
+    transform: scale(1.06);
   }
   #bg-overlay {
     position: fixed;
@@ -85,10 +85,10 @@
     color: var(--text);
     padding: 12px;
     padding-bottom: 40px;
-    background: var(--bg); /* fallback kalau gambar gagal load */
+    background: var(--bg);
   }
 
-  /* ==== HEADER STATS (FIXED) ==== */
+  /* ==== HEADER ==== */
   .stats {
     position: fixed;
     top: 0; left: 0; right: 0;
@@ -105,7 +105,6 @@
     box-shadow: 0 6px 30px rgba(0,0,0,0.35);
     padding-top: calc(10px + env(safe-area-inset-top));
   }
-
   .stat {
     flex: 1;
     min-width: 0;
@@ -119,7 +118,6 @@
     overflow: hidden;
   }
   body.light .stat { background: rgba(255,255,255,0.55); }
-
   .stat .ico {
     width: 30px; height: 30px;
     border-radius: 9px;
@@ -148,7 +146,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
   .dot-live {
     display: inline-block;
     width: 7px; height: 7px;
@@ -164,10 +161,7 @@
     100% { box-shadow: 0 0 0 0 rgba(255,45,85,0); }
   }
 
-  .stats-spacer {
-    height: 70px;
-    height: calc(70px + env(safe-area-inset-top));
-  }
+  .stats-spacer { height: 70px; height: calc(70px + env(safe-area-inset-top)); }
 
   #status {
     font-size: 12.5px;
@@ -187,7 +181,11 @@
     gap: 6px;
   }
 
+  /* =================================================== */
+  /* ============ BUBBLE CHAT + ANIMASI MASUK ========== */
+  /* =================================================== */
   .msg {
+    position: relative;
     padding: 10px 13px;
     border-radius: 14px;
     background: var(--panel-strong);
@@ -197,16 +195,75 @@
     overflow-wrap: anywhere;
     backdrop-filter: blur(10px) saturate(1.2);
     -webkit-backdrop-filter: blur(10px) saturate(1.2);
-    transition: background .2s ease, border-color .2s ease, transform .15s ease;
-    animation: pop .18s ease;
+
+    /* animasi masuk dari kanan + membesar + glow */
+    animation:
+      slideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both,
+      glowPulse 2.2s ease-out 0.35s 1;
+    transform-origin: right center;
   }
-  .msg:hover {
-    transform: translateX(2px);
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+
+  @keyframes slideIn {
+    0% {
+      opacity: 0;
+      transform: translateX(28px) scale(0.96);
+      filter: blur(3px);
+    }
+    60% {
+      opacity: 1;
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+      filter: blur(0);
+    }
   }
-  @keyframes pop {
-    from { opacity: 0; transform: translateY(4px) scale(0.99); }
-    to   { opacity: 1; transform: none; }
+
+  /* garis aksen kiri yang tumbuh */
+  .msg::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 14px 0 0 14px;
+    background: linear-gradient(180deg, var(--accent), var(--accent-2));
+    transform: scaleY(0);
+    transform-origin: top;
+    animation: growLine 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  }
+  @keyframes growLine {
+    from { transform: scaleY(0); opacity: 0; }
+    to   { transform: scaleY(1); opacity: 1; }
+  }
+
+  /* glow pulse sekali di bubble baru */
+  @keyframes glowPulse {
+    0% {
+      box-shadow:
+        0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent),
+        0 0 20px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+    70% {
+      box-shadow:
+        0 0 0 12px transparent,
+        0 0 30px 0 transparent;
+    }
+    100% {
+      box-shadow:
+        0 0 0 0 transparent,
+        0 0 0 0 transparent;
+    }
+  }
+
+  /* pesan lama sedikit tertekan ke atas saat ada baru */
+  .msg.shift {
+    animation: shift 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes shift {
+    0%   { transform: translateY(0); }
+    40%  { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
   }
 
   .name {
@@ -215,8 +272,13 @@
     margin-right: 6px;
     font-size: 14px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    animation: namePop 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
   }
   body.light .name { text-shadow: none; }
+  @keyframes namePop {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 1; transform: none; }
+  }
 
   .badge {
     display: inline-block;
@@ -228,6 +290,11 @@
     margin-right: 6px;
     vertical-align: middle;
     text-transform: uppercase;
+    animation: badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+  }
+  @keyframes badgePop {
+    from { opacity: 0; transform: scale(0.4); }
+    to   { opacity: 1; transform: scale(1); }
   }
   .owner { background: color-mix(in srgb, var(--owner) 25%, transparent); color: var(--owner); }
   .mod   { background: color-mix(in srgb, var(--mod) 25%, transparent); color: var(--mod); }
@@ -239,13 +306,73 @@
     border-left: 3px solid var(--accent);
   }
 
+  /* =================================================== */
+  /* ============ SUPER CHAT (animasi spesial) ========= */
+  /* =================================================== */
   .msg.superchat {
     background: linear-gradient(135deg, var(--super-1), var(--super-2));
     color: #fff;
     border: 0;
-    box-shadow: 0 8px 24px color-mix(in srgb, var(--super-1) 45%, transparent);
+    animation:
+      superBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+      superGlow 2.5s ease-out 0.5s 1;
+    overflow: hidden;
   }
   .msg.superchat .name { color: #fff; }
+
+  /* shimmer emas melintas di Super Chat */
+  .msg.superchat::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -60%;
+    width: 60%; height: 100%;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255,255,255,0.45) 50%,
+      transparent 100%
+    );
+    transform: skewX(-20deg);
+    animation: shimmer 2.2s ease-out 0.4s 1;
+    pointer-events: none;
+  }
+  @keyframes shimmer {
+    0%   { left: -60%; }
+    100% { left: 120%; }
+  }
+
+  @keyframes superBounce {
+    0% {
+      opacity: 0;
+      transform: translateX(40px) scale(0.85);
+    }
+    60% {
+      opacity: 1;
+      transform: translateX(0) scale(1.03);
+    }
+    100% {
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+
+  @keyframes superGlow {
+    0% {
+      box-shadow:
+        0 0 0 0 rgba(255,180,0,0.7),
+        0 8px 30px rgba(255,78,69,0.6);
+    }
+    70% {
+      box-shadow:
+        0 0 0 16px rgba(255,180,0,0),
+        0 8px 24px rgba(255,78,69,0.4);
+    }
+    100% {
+      box-shadow:
+        0 0 0 0 rgba(255,180,0,0),
+        0 8px 24px color-mix(in srgb, var(--super-1) 45%, transparent);
+    }
+  }
 
   .amount {
     display: inline-block;
@@ -255,6 +382,7 @@
     font-size: 11.5px;
     font-weight: 700;
     margin-left: 6px;
+    animation: badgePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both;
   }
 
   .skeleton {
@@ -279,12 +407,10 @@
     border-radius: 999px;
   }
 
-  /* ============ RESPONSIVE HP ============ */
+  /* ==== RESPONSIVE HP ==== */
   @media (max-width: 600px) {
     :root { --bg-blur: 18px; }
-
     body { font-size: 16px; padding: 8px; padding-bottom: 30px; }
-
     .stats {
       gap: 5px;
       padding: 7px 8px;
@@ -295,16 +421,9 @@
     .stat .ico svg { width: 13px; height: 13px; }
     .stat .label { font-size: 9px; }
     .stat .value { font-size: 14px; }
-
     .stats-spacer { height: 60px; height: calc(60px + env(safe-area-inset-top)); }
-
     #status { font-size: 11.5px; padding: 7px 10px; margin-bottom: 8px; }
-
-    .msg {
-      padding: 11px 13px;
-      border-radius: 13px;
-      font-size: 16px;
-    }
+    .msg { padding: 11px 13px; border-radius: 13px; font-size: 16px; }
     .name { font-size: 15.5px; }
     .badge { font-size: 9.5px; padding: 1px 6px; }
     .amount { font-size: 12px; }
@@ -318,6 +437,12 @@
     .stat .ico svg { width: 11px; height: 11px; }
     .stat { padding: 5px 6px; gap: 5px; }
     .msg { font-size: 15px; padding: 10px 11px; }
+  }
+
+  /* Hormati user yang matikan animasi */
+  @media (prefers-reduced-motion: reduce) {
+    .msg, .name, .badge, .amount, .msg.superchat { animation: none !important; }
+    .msg::before, .msg.superchat::after { display: none; }
   }
 </style>
 </head>
@@ -375,6 +500,7 @@ let pageToken = "";
 let running = false;
 let pollTimer = null;
 let statsTimer = null;
+let firstBatch = true;
 
 function setStatus(s) { document.getElementById("status").textContent = s; }
 
@@ -397,7 +523,6 @@ async function loadConfig() {
   }
 
   if (CFG.darkMode === false) document.body.classList.add("light");
-
   if (CFG.accentColor) {
     document.documentElement.style.setProperty("--accent", CFG.accentColor);
   }
@@ -445,6 +570,7 @@ async function fetchStats() {
 async function start() {
   stop();
   running = true;
+  firstBatch = true;
   document.getElementById("chat").innerHTML = "";
   setStatus(`Mengambil liveChatId untuk video ${CFG.videoId}...`);
 
@@ -499,7 +625,13 @@ async function poll() {
     if (d.error) { setStatus("❌ " + d.error.message); return; }
 
     if (d.items && d.items.length) {
-      d.items.forEach(addMsg);
+      // batch pertama (muat awal) → animasi halus tanpa berlebihan
+      if (firstBatch) {
+        d.items.forEach(it => addMsg(it, true));
+        firstBatch = false;
+      } else {
+        d.items.forEach(it => addMsg(it, false));
+      }
       const total = document.querySelectorAll(".msg").length;
       document.getElementById("chatcount").textContent = fmt(total);
       setStatus(`✅ Live · menunggu chat baru...`);
@@ -514,7 +646,7 @@ async function poll() {
   }
 }
 
-function addMsg(item) {
+function addMsg(item, isInitial) {
   const a = item.authorDetails || {};
   const s = item.snippet || {};
   const isSuper = !!s.superChatDetails;
@@ -524,6 +656,12 @@ function addMsg(item) {
   el.className = "msg";
   if (isSuper && CFG.showSuperChat !== false) el.classList.add("superchat");
   else if (isMember) el.classList.add("member");
+
+  // Untuk batch awal: matikan animasi biar tidak spam berkedip
+  if (isInitial) {
+    el.style.animation = "none";
+    el.style.opacity = "1";
+  }
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "name";
@@ -552,11 +690,30 @@ function addMsg(item) {
   }
 
   const chat = document.getElementById("chat");
-  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 200);
-  chat.appendChild(el);
-  if (CFG.autoScroll !== false && atBottom) {
-    window.scrollTo(0, document.body.scrollHeight);
+
+  // Efek "geser" untuk pesan terakhir saat ada yang baru (kecuali batch awal)
+  if (!isInitial) {
+    const last = chat.lastElementChild;
+    if (last) {
+      last.classList.remove("shift");
+      void last.offsetWidth; // reflow paksa biar animasi restart
+      last.classList.add("shift");
+    }
   }
+
+  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 200);
+
+  chat.appendChild(el);
+
+  if (CFG.autoScroll !== false && atBottom) {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  }
+
+  // bersihkan animasi biar tidak numpuk kalau scroll balik ke atas
+  setTimeout(() => {
+    el.style.animation = "";
+    el.style.opacity = "";
+  }, 3000);
 }
 
 loadConfig();
