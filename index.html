@@ -1,15 +1,177 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <meta charset="utf-8">
-  <title>Redirect ke Live Chat</title>
-  <script>
-    window.location.replace(
-      "https://www.youtube.com/live_chat?is_popout=1&v=9T-nyBGAgrk"
-    );
-  </script>
+<meta charset="utf-8">
+<title>Live Chat Ringan</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #0f0f0f; color: #eee;
+    margin: 0; padding: 12px;
+    font-size: 14px;
+  }
+  .bar {
+    display: flex; gap: 8px; margin-bottom: 10px;
+    position: sticky; top: 0; background: #0f0f0f; padding-bottom: 10px;
+    z-index: 10;
+  }
+  input {
+    flex: 1; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid #333; background: #1a1a1a; color: #eee;
+    font-size: 14px;
+  }
+  button {
+    padding: 8px 14px; border-radius: 6px; border: 0;
+    background: #3ea6ff; color: #000; font-weight: bold;
+    cursor: pointer; font-size: 14px;
+  }
+  button:hover { background: #65b8ff; }
+  #status { color: #888; font-size: 12px; margin-bottom: 8px; }
+  .msg {
+    padding: 6px 0; border-bottom: 1px solid #1e1e1e;
+    line-height: 1.4; word-wrap: break-word;
+  }
+  .name { color: #3ea6ff; font-weight: 600; margin-right: 6px; }
+  .owner { background: #2a2a2a; color: #ffd600; padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
+  .mod { background: #1e3a5f; color: #3ea6ff; padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
+  .superchat {
+    background: linear-gradient(90deg, #ff4e45, #ff9800);
+    padding: 6px 8px; border-radius: 6px; margin: 4px 0;
+  }
+</style>
 </head>
 <body>
-  <p>Mengalihkan ke live chat… <a href="https://www.youtube.com/live_chat?is_popout=1&v=9T-nyBGAgrk">Klik jika tidak otomatis</a></p>
+
+<div class="bar">
+  <input id="vid" placeholder="Video ID (contoh: 9T-nyBGAgrk)" value="9T-nyBGAgrk">
+  <button onclick="start()">Mulai</button>
+  <button onclick="stop()" style="background:#444;color:#eee">Stop</button>
+</div>
+<div id="status">Masukkan Video ID lalu klik Mulai.</div>
+<div id="chat"></div>
+
+<script>
+const API_KEY = "AIzaSyCnwoBysfF0FsDw0JcfHIenzo0maSPcw9U";
+
+let liveChatId = "";
+let pageToken = "";
+let timer = null;
+let running = false;
+
+function setStatus(s) {
+  document.getElementById("status").textContent = s;
+}
+
+async function start() {
+  stop();
+  running = true;
+  document.getElementById("chat").innerHTML = "";
+  setStatus("Mengambil liveChatId...");
+
+  const vid = document.getElementById("vid").value.trim();
+  if (!vid) { setStatus("Video ID kosong."); return; }
+
+  try {
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${API_KEY}`);
+    const d = await r.json();
+
+    if (d.error) {
+      setStatus("❌ Error API: " + d.error.message);
+      return;
+    }
+    if (!d.items || !d.items.length) {
+      setStatus("❌ Video tidak ditemukan.");
+      return;
+    }
+    const lsd = d.items[0].liveStreamingDetails;
+    if (!lsd || !lsd.activeLiveChatId) {
+      setStatus("❌ Video ini bukan live / live chat tidak aktif.");
+      return;
+    }
+    liveChatId = lsd.activeLiveChatId;
+    pageToken = "";
+    setStatus("✅ Terhubung. Menunggu chat...");
+    poll();
+  } catch (e) {
+    setStatus("❌ Fetch error: " + e.message);
+  }
+}
+
+function stop() {
+  running = false;
+  clearTimeout(timer);
+  setStatus("Dihentikan.");
+}
+
+async function poll() {
+  if (!running) return;
+  const url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=snippet,authorDetails&maxResults=200&key=${API_KEY}${pageToken ? "&pageToken="+pageToken : ""}`;
+
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+
+    if (d.error) {
+      setStatus("❌ Error: " + d.error.message);
+      return;
+    }
+
+    if (d.items && d.items.length) {
+      d.items.forEach(addMsg);
+      setStatus(`✅ ${d.items.length} pesan baru · total ${document.querySelectorAll(".msg").length}`);
+    }
+
+    pageToken = d.nextPageToken || "";
+    timer = setTimeout(poll, d.pollingIntervalMillis || 3000);
+  } catch (e) {
+    setStatus("❌ " + e.message);
+    timer = setTimeout(poll, 5000);
+  }
+}
+
+function addMsg(item) {
+  const el = document.createElement("div");
+  el.className = "msg";
+
+  const author = item.authorDetails || {};
+  const snippet = item.snippet || {};
+
+  if (snippet.superChatDetails) {
+    el.classList.add("superchat");
+  }
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "name";
+  nameSpan.textContent = author.displayName || "?";
+  el.appendChild(nameSpan);
+
+  if (author.isChatOwner) {
+    const b = document.createElement("span");
+    b.className = "owner";
+    b.textContent = "OWNER";
+    el.appendChild(b);
+  } else if (author.isChatModerator) {
+    const b = document.createElement("span");
+    b.className = "mod";
+    b.textContent = "MOD";
+    el.appendChild(b);
+  }
+
+  const txt = document.createElement("span");
+  txt.textContent = snippet.displayMessage || "";
+  el.appendChild(txt);
+
+  const chat = document.getElementById("chat");
+  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 100);
+  chat.appendChild(el);
+  if (atBottom) window.scrollTo(0, document.body.scrollHeight);
+}
+
+window.addEventListener("load", () => {
+  const h = location.hash.match(/v=([\w-]+)/);
+  if (h) document.getElementById("vid").value = h[1];
+});
+</script>
 </body>
 </html>
