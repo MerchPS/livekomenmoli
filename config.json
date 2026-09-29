@@ -9,5 +9,9 @@
   "showSuperChat": true,
   "darkMode": true,
   "autoScroll": true,
-  "accentColor": "#ff4d8d"
+  "accentColor": "#ff4d8d",
+
+  "backgroundImage": "bg.jpg",
+  "backgroundBlur": 14,
+  "backgroundDim": 0.72
 }
