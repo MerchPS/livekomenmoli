@@ -2,93 +2,141 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<title>Live Chat Ringan</title>
+<title>Live Chat</title>
 <style>
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    font-family: system-ui, -apple-system, sans-serif;
-    background: #0f0f0f; color: #eee;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     margin: 0; padding: 12px;
     font-size: 14px;
+    background: #0f0f0f; color: #eee;
   }
-  .bar {
-    display: flex; gap: 8px; margin-bottom: 10px;
-    position: sticky; top: 0; background: #0f0f0f; padding-bottom: 10px;
+  body.light { background: #fff; color: #111; }
+  body.light .msg { border-bottom-color: #eee; }
+  body.light .name { color: #065fd4; }
+  body.light .owner { background: #fff3cd; color: #8a6d00; }
+  body.light .mod { background: #e3f2fd; color: #0d47a1; }
+
+  #status {
+    color: #888; font-size: 12px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+    position: sticky; top: 0;
     z-index: 10;
   }
-  input {
-    flex: 1; padding: 8px 10px; border-radius: 6px;
-    border: 1px solid #333; background: #1a1a1a; color: #eee;
-    font-size: 14px;
-  }
-  button {
-    padding: 8px 14px; border-radius: 6px; border: 0;
-    background: #3ea6ff; color: #000; font-weight: bold;
-    cursor: pointer; font-size: 14px;
-  }
-  button:hover { background: #65b8ff; }
-  #status { color: #888; font-size: 12px; margin-bottom: 8px; }
+  body.light #status { background: rgba(0,0,0,0.04); }
+
+  #chat { padding-bottom: 40px; }
+
   .msg {
-    padding: 6px 0; border-bottom: 1px solid #1e1e1e;
-    line-height: 1.4; word-wrap: break-word;
+    padding: 6px 0;
+    border-bottom: 1px solid #1e1e1e;
+    line-height: 1.4;
+    word-wrap: break-word;
+    animation: fadein 0.2s ease;
   }
+  @keyframes fadein { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
   .name { color: #3ea6ff; font-weight: 600; margin-right: 6px; }
-  .owner { background: #2a2a2a; color: #ffd600; padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
-  .mod { background: #1e3a5f; color: #3ea6ff; padding: 1px 5px; border-radius: 3px; font-size: 11px; margin-right: 6px; }
+  .badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .owner { background: #2a2a2a; color: #ffd600; }
+  .mod { background: #1e3a5f; color: #3ea6ff; }
+
   .superchat {
     background: linear-gradient(90deg, #ff4e45, #ff9800);
-    padding: 6px 8px; border-radius: 6px; margin: 4px 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin: 6px 0;
+    border: 0;
+    color: #fff;
+  }
+  .superchat .name { color: #fff; }
+  .superchat .amount {
+    display: inline-block;
+    background: rgba(0,0,0,0.25);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  .member {
+    background: rgba(62, 166, 255, 0.08);
+    border-left: 3px solid #3ea6ff;
+    padding-left: 8px;
   }
 </style>
 </head>
 <body>
 
-<div class="bar">
-  <input id="vid" placeholder="Video ID (contoh: 9T-nyBGAgrk)" value="9T-nyBGAgrk">
-  <button onclick="start()">Mulai</button>
-  <button onclick="stop()" style="background:#444;color:#eee">Stop</button>
-</div>
-<div id="status">Masukkan Video ID lalu klik Mulai.</div>
+<div id="status">Memuat config.json...</div>
 <div id="chat"></div>
 
 <script>
-const API_KEY = "AIzaSyAUm8jbtRdgiTiBQnoBSO6Bqy_ODkqz4Mg";
-
+let CFG = {};
 let liveChatId = "";
 let pageToken = "";
-let timer = null;
 let running = false;
+let pollTimer = null;
 
 function setStatus(s) {
   document.getElementById("status").textContent = s;
+}
+
+async function loadConfig() {
+  try {
+    const r = await fetch("config.json", { cache: "no-store" });
+    CFG = await r.json();
+  } catch (e) {
+    setStatus("❌ Gagal baca config.json — buka via http:// (pakai server lokal), bukan file://");
+    return;
+  }
+
+  if (CFG.darkMode === false) document.body.classList.add("light");
+
+  if (!CFG.apiKey || CFG.apiKey.includes("ISI_")) {
+    setStatus("❌ apiKey belum diisi di config.json");
+    return;
+  }
+  if (!CFG.videoId) {
+    setStatus("❌ videoId belum diisi di config.json");
+    return;
+  }
+
+  start();
 }
 
 async function start() {
   stop();
   running = true;
   document.getElementById("chat").innerHTML = "";
-  setStatus("Mengambil liveChatId...");
-
-  const vid = document.getElementById("vid").value.trim();
-  if (!vid) { setStatus("Video ID kosong."); return; }
+  setStatus(`Mengambil liveChatId untuk video ${CFG.videoId}...`);
 
   try {
-    const r = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${API_KEY}`);
+    const r = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${CFG.videoId}&key=${CFG.apiKey}`
+    );
     const d = await r.json();
 
-    if (d.error) {
-      setStatus("❌ Error API: " + d.error.message);
-      return;
-    }
-    if (!d.items || !d.items.length) {
-      setStatus("❌ Video tidak ditemukan.");
-      return;
-    }
+    if (d.error) { setStatus("❌ " + d.error.message); return; }
+    if (!d.items || !d.items.length) { setStatus("❌ Video tidak ditemukan."); return; }
+
     const lsd = d.items[0].liveStreamingDetails;
     if (!lsd || !lsd.activeLiveChatId) {
       setStatus("❌ Video ini bukan live / live chat tidak aktif.");
       return;
     }
+
     liveChatId = lsd.activeLiveChatId;
     pageToken = "";
     setStatus("✅ Terhubung. Menunggu chat...");
@@ -100,78 +148,96 @@ async function start() {
 
 function stop() {
   running = false;
-  clearTimeout(timer);
-  setStatus("Dihentikan.");
+  clearTimeout(pollTimer);
 }
 
 async function poll() {
   if (!running) return;
-  const url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=snippet,authorDetails&maxResults=200&key=${API_KEY}${pageToken ? "&pageToken="+pageToken : ""}`;
+
+  const max = Math.min(Math.max(CFG.maxResults || 200, 1), 2000);
+  const url =
+    `https://www.googleapis.com/youtube/v3/liveChat/messages` +
+    `?liveChatId=${encodeURIComponent(liveChatId)}` +
+    `&part=snippet,authorDetails` +
+    `&maxResults=${max}` +
+    `&key=${CFG.apiKey}` +
+    (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "");
 
   try {
-    const r = await fetch(url);
-    const d = await r.json();
+    const d = await (await fetch(url)).json();
 
-    if (d.error) {
-      setStatus("❌ Error: " + d.error.message);
-      return;
-    }
+    if (d.error) { setStatus("❌ " + d.error.message); return; }
 
     if (d.items && d.items.length) {
       d.items.forEach(addMsg);
-      setStatus(`✅ ${d.items.length} pesan baru · total ${document.querySelectorAll(".msg").length}`);
+      const total = document.querySelectorAll(".msg").length;
+      setStatus(`✅ Live · total ${total} pesan`);
     }
 
     pageToken = d.nextPageToken || "";
-    timer = setTimeout(poll, d.pollingIntervalMillis || 3000);
+    const wait = CFG.pollIntervalMs > 0 ? CFG.pollIntervalMs : (d.pollingIntervalMillis || 3000);
+    pollTimer = setTimeout(poll, wait);
   } catch (e) {
     setStatus("❌ " + e.message);
-    timer = setTimeout(poll, 5000);
+    pollTimer = setTimeout(poll, 5000);
   }
 }
 
 function addMsg(item) {
+  const a = item.authorDetails || {};
+  const s = item.snippet || {};
+  const isSuper = !!s.superChatDetails;
+  const isMember = !!s.memberMilestone || (a.isChatSponsor === true);
+
   const el = document.createElement("div");
   el.className = "msg";
+  if (isSuper && CFG.showSuperChat !== false) el.classList.add("superchat");
+  else if (isMember) el.classList.add("member");
 
-  const author = item.authorDetails || {};
-  const snippet = item.snippet || {};
-
-  if (snippet.superChatDetails) {
-    el.classList.add("superchat");
-  }
-
+  // Nama
   const nameSpan = document.createElement("span");
   nameSpan.className = "name";
-  nameSpan.textContent = author.displayName || "?";
+  nameSpan.textContent = a.displayName || "?";
   el.appendChild(nameSpan);
 
-  if (author.isChatOwner) {
+  // Badge owner/mod
+  if (a.isChatOwner && CFG.showOwner !== false) {
     const b = document.createElement("span");
-    b.className = "owner";
+    b.className = "badge owner";
     b.textContent = "OWNER";
     el.appendChild(b);
-  } else if (author.isChatModerator) {
+  } else if (a.isChatModerator && CFG.showModerator !== false) {
     const b = document.createElement("span");
-    b.className = "mod";
+    b.className = "badge mod";
     b.textContent = "MOD";
     el.appendChild(b);
   }
 
+  // Teks
   const txt = document.createElement("span");
-  txt.textContent = snippet.displayMessage || "";
+  txt.textContent = s.displayMessage || "";
   el.appendChild(txt);
 
+  // Super Chat amount
+  if (isSuper && CFG.showSuperChat !== false && s.superChatDetails.amountDisplayString) {
+    const amt = document.createElement("span");
+    amt.className = "amount";
+    amt.textContent = s.superChatDetails.amountDisplayString;
+    el.appendChild(amt);
+  }
+
   const chat = document.getElementById("chat");
-  const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 100);
+  const atBottom =
+    (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 150);
+
   chat.appendChild(el);
-  if (atBottom) window.scrollTo(0, document.body.scrollHeight);
+
+  if (CFG.autoScroll !== false && atBottom) {
+    window.scrollTo(0, document.body.scrollHeight);
+  }
 }
 
-window.addEventListener("load", () => {
-  const h = location.hash.match(/v=([\w-]+)/);
-  if (h) document.getElementById("vid").value = h[1];
-});
+loadConfig();
 </script>
 </body>
 </html>
