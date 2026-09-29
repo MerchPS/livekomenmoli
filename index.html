@@ -4,83 +4,268 @@
 <meta charset="utf-8">
 <title>Live Chat</title>
 <style>
+  :root {
+    --accent: #ff4d8d;
+    --accent-2: #a855f7;
+    --bg: #0b0b12;
+    --bg-2: #12121c;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.07);
+    --text: #ececf1;
+    --text-dim: #8b8b9a;
+    --name: #7dd3fc;
+    --owner: #ffd84d;
+    --mod: #7dd3fc;
+    --super-1: #ff4e45;
+    --super-2: #ff9800;
+  }
+  body.light {
+    --bg: #f7f7fb;
+    --bg-2: #ffffff;
+    --panel: rgba(0,0,0,0.03);
+    --border: rgba(0,0,0,0.08);
+    --text: #14141c;
+    --text-dim: #6b6b7b;
+    --name: #065fd4;
+    --owner: #b8860b;
+    --mod: #0d47a1;
+  }
+
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    margin: 0; padding: 12px;
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
     font-size: 14px;
-    background: #0f0f0f; color: #eee;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, color-mix(in srgb, var(--accent-2) 14%, transparent), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    padding: 14px;
+    min-height: 100%;
   }
-  body.light { background: #fff; color: #111; }
-  body.light .msg { border-bottom-color: #eee; }
-  body.light .name { color: #065fd4; }
-  body.light .owner { background: #fff3cd; color: #8a6d00; }
-  body.light .mod { background: #e3f2fd; color: #0d47a1; }
 
+  /* ==== HEADER STATS ==== */
+  .stats {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px;
+    margin-bottom: 14px;
+    border-radius: 18px;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 12%, var(--bg-2)),
+      color-mix(in srgb, var(--accent-2) 10%, var(--bg-2)));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+  }
+
+  .stat {
+    flex: 1;
+    min-width: 130px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    transition: transform .15s ease, background .2s ease;
+  }
+  .stat:hover { transform: translateY(-1px); }
+
+  .stat .ico {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg,
+      color-mix(in srgb, var(--accent) 55%, transparent),
+      color-mix(in srgb, var(--accent-2) 55%, transparent));
+    color: #fff;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .stat .info { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
+  .stat .label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
+  .stat .value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .dot-live {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #ff2d55;
+    margin-right: 6px;
+    box-shadow: 0 0 0 0 rgba(255,45,85,0.7);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,45,85,0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255,45,85,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,45,85,0); }
+  }
+
+  /* ==== STATUS ==== */
   #status {
-    color: #888; font-size: 12px;
-    margin-bottom: 8px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background: rgba(255,255,255,0.03);
-    position: sticky; top: 0;
-    z-index: 10;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0 4px 10px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--border);
   }
-  body.light #status { background: rgba(0,0,0,0.04); }
 
-  #chat { padding-bottom: 40px; }
+  /* ==== CHAT LIST ==== */
+  #chat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 60px;
+  }
 
   .msg {
-    padding: 6px 0;
-    border-bottom: 1px solid #1e1e1e;
-    line-height: 1.4;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    line-height: 1.45;
     word-wrap: break-word;
-    animation: fadein 0.2s ease;
+    transition: transform .12s ease, background .2s ease, border-color .2s ease;
+    animation: pop .18s ease;
   }
-  @keyframes fadein { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+  .msg:hover {
+    transform: translateX(2px);
+    background: color-mix(in srgb, var(--accent) 8%, var(--panel));
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(4px) scale(0.99); }
+    to   { opacity: 1; transform: none; }
+  }
 
-  .name { color: #3ea6ff; font-weight: 600; margin-right: 6px; }
+  .name {
+    color: var(--name);
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
   .badge {
     display: inline-block;
-    padding: 1px 5px;
-    border-radius: 3px;
-    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .4px;
     margin-right: 6px;
     vertical-align: middle;
+    text-transform: uppercase;
   }
-  .owner { background: #2a2a2a; color: #ffd600; }
-  .mod { background: #1e3a5f; color: #3ea6ff; }
+  .owner { background: color-mix(in srgb, var(--owner) 22%, transparent); color: var(--owner); }
+  .mod   { background: color-mix(in srgb, var(--mod) 22%, transparent); color: var(--mod); }
 
-  .superchat {
-    background: linear-gradient(90deg, #ff4e45, #ff9800);
-    padding: 8px 10px;
-    border-radius: 8px;
-    margin: 6px 0;
-    border: 0;
-    color: #fff;
+  .msg.member {
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 60%);
+    border-left: 3px solid var(--accent);
   }
-  .superchat .name { color: #fff; }
-  .superchat .amount {
+
+  .msg.superchat {
+    background: linear-gradient(135deg, var(--super-1), var(--super-2));
+    color: #fff;
+    border: 0;
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--super-1) 35%, transparent);
+  }
+  .msg.superchat .name { color: #fff; }
+
+  .amount {
     display: inline-block;
-    background: rgba(0,0,0,0.25);
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 12px;
+    background: rgba(0,0,0,0.28);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
     margin-left: 6px;
   }
 
-  .member {
-    background: rgba(62, 166, 255, 0.08);
-    border-left: 3px solid #3ea6ff;
-    padding-left: 8px;
+  /* ==== SKELETON LOADING ==== */
+  .skeleton {
+    height: 42px;
+    border-radius: 14px;
+    background: linear-gradient(90deg,
+      color-mix(in srgb, var(--panel) 100%, transparent) 25%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 50%,
+      color-mix(in srgb, var(--panel) 100%, transparent) 75%);
+    background-size: 200% 100%;
+    animation: shine 1.4s infinite;
+  }
+  @keyframes shine {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ==== SCROLLBAR ==== */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--accent) 70%, transparent);
+    background-clip: padding-box;
   }
 </style>
 </head>
 <body>
 
+<div class="stats">
+  <div class="stat">
+    <div class="ico">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+    </div>
+    <div class="info">
+      <span class="label"><span class="dot-live"></span>Viewers</span>
+      <span class="value" id="viewers">—</span>
+    </div>
+  </div>
+
+  <div class="stat">
+    <div class="ico">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-9.7-9.3C.7 8.4 2.7 5 6.2 5c2 0 3.4 1.1 4.3 2.3.3.4.9.4 1.2 0C12.6 6.1 14 5 16 5c3.5 0 5.5 3.4 3.9 6.7C19.5 16.4 12 21 12 21z"/></svg>
+    </div>
+    <div class="info">
+      <span class="label">Likes</span>
+      <span class="value" id="likes">—</span>
+    </div>
+  </div>
+
+  <div class="stat">
+    <div class="ico">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16a1 1 0 011 1v11a1 1 0 01-1 1H8l-4 4V5a1 1 0 011-1z"/></svg>
+    </div>
+    <div class="info">
+      <span class="label">Chat</span>
+      <span class="value" id="chatcount">0</span>
+    </div>
+  </div>
+</div>
+
 <div id="status">Memuat config.json...</div>
-<div id="chat"></div>
+<div id="chat">
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+  <div class="skeleton"></div>
+</div>
 
 <script>
 let CFG = {};
@@ -88,9 +273,19 @@ let liveChatId = "";
 let pageToken = "";
 let running = false;
 let pollTimer = null;
+let statsTimer = null;
 
 function setStatus(s) {
   document.getElementById("status").textContent = s;
+}
+
+function fmt(n) {
+  if (n === undefined || n === null || isNaN(n)) return "—";
+  n = Number(n);
+  if (n >= 1e9) return (n/1e9).toFixed(1).replace(/\.0$/,"") + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(1).replace(/\.0$/,"") + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,"") + "K";
+  return n.toLocaleString("id-ID");
 }
 
 async function loadConfig() {
@@ -98,22 +293,45 @@ async function loadConfig() {
     const r = await fetch("config.json", { cache: "no-store" });
     CFG = await r.json();
   } catch (e) {
-    setStatus("❌ Gagal baca config.json — buka via http:// (pakai server lokal), bukan file://");
+    setStatus("❌ Gagal baca config.json — buka via http:// (server lokal), bukan file://");
     return;
   }
 
   if (CFG.darkMode === false) document.body.classList.add("light");
+  if (CFG.accentColor) {
+    document.documentElement.style.setProperty("--accent", CFG.accentColor);
+  }
 
   if (!CFG.apiKey || CFG.apiKey.includes("ISI_")) {
-    setStatus("❌ apiKey belum diisi di config.json");
-    return;
+    setStatus("❌ apiKey belum diisi di config.json"); return;
   }
   if (!CFG.videoId) {
-    setStatus("❌ videoId belum diisi di config.json");
-    return;
+    setStatus("❌ videoId belum diisi di config.json"); return;
   }
 
   start();
+}
+
+async function fetchStats() {
+  try {
+    const r = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails,statistics` +
+      `&id=${CFG.videoId}&key=${CFG.apiKey}`
+    );
+    const d = await r.json();
+    if (d.error) return;
+    const item = d.items && d.items[0];
+    if (!item) return;
+
+    const lsd = item.liveStreamingDetails || {};
+    const st  = item.statistics || {};
+
+    document.getElementById("viewers").textContent =
+      lsd.concurrentViewers ? fmt(lsd.concurrentViewers) : "—";
+    document.getElementById("likes").textContent =
+      st.likeCount ? fmt(st.likeCount) : "—";
+  } catch(e) {}
 }
 
 async function start() {
@@ -124,7 +342,8 @@ async function start() {
 
   try {
     const r = await fetch(
-      `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${CFG.videoId}&key=${CFG.apiKey}`
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails&id=${CFG.videoId}&key=${CFG.apiKey}`
     );
     const d = await r.json();
 
@@ -141,6 +360,11 @@ async function start() {
     pageToken = "";
     setStatus("✅ Terhubung. Menunggu chat...");
     poll();
+
+    // stats: ambil sekarang + interval
+    fetchStats();
+    clearInterval(statsTimer);
+    statsTimer = setInterval(fetchStats, CFG.statsIntervalMs || 15000);
   } catch (e) {
     setStatus("❌ Fetch error: " + e.message);
   }
@@ -149,6 +373,7 @@ async function start() {
 function stop() {
   running = false;
   clearTimeout(pollTimer);
+  clearInterval(statsTimer);
 }
 
 async function poll() {
@@ -171,7 +396,8 @@ async function poll() {
     if (d.items && d.items.length) {
       d.items.forEach(addMsg);
       const total = document.querySelectorAll(".msg").length;
-      setStatus(`✅ Live · total ${total} pesan`);
+      document.getElementById("chatcount").textContent = fmt(total);
+      setStatus(`✅ Live · menunggu chat baru...`);
     }
 
     pageToken = d.nextPageToken || "";
@@ -194,31 +420,25 @@ function addMsg(item) {
   if (isSuper && CFG.showSuperChat !== false) el.classList.add("superchat");
   else if (isMember) el.classList.add("member");
 
-  // Nama
   const nameSpan = document.createElement("span");
   nameSpan.className = "name";
   nameSpan.textContent = a.displayName || "?";
   el.appendChild(nameSpan);
 
-  // Badge owner/mod
   if (a.isChatOwner && CFG.showOwner !== false) {
     const b = document.createElement("span");
-    b.className = "badge owner";
-    b.textContent = "OWNER";
+    b.className = "badge owner"; b.textContent = "Owner";
     el.appendChild(b);
   } else if (a.isChatModerator && CFG.showModerator !== false) {
     const b = document.createElement("span");
-    b.className = "badge mod";
-    b.textContent = "MOD";
+    b.className = "badge mod"; b.textContent = "Mod";
     el.appendChild(b);
   }
 
-  // Teks
   const txt = document.createElement("span");
   txt.textContent = s.displayMessage || "";
   el.appendChild(txt);
 
-  // Super Chat amount
   if (isSuper && CFG.showSuperChat !== false && s.superChatDetails.amountDisplayString) {
     const amt = document.createElement("span");
     amt.className = "amount";
